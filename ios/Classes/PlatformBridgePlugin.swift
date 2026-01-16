@@ -114,7 +114,7 @@ public class PlatformBridgePlugin: NSObject, FlutterPlugin {
      *   - name: 数据标识符
      *   - data: 要发送的数据
      */
-    func sendDataToFlutter(name: String, data: Any?) {
+    public func sendDataToFlutter(name: String, data: Any?) {
         LogUtils.debug("Sending data to Flutter: name=\(name), data=\(String(describing: data))")
         
         let args: [String: Any?] = [
@@ -131,7 +131,7 @@ public class PlatformBridgePlugin: NSObject, FlutterPlugin {
      *   - name: 数据标识符
      *   - listener: 接收数据的回调函数
      */
-    func listenFromFlutter(name: String, listener: @escaping (Any?) -> Void) {
+    public func listenFromFlutter(name: String, listener: @escaping (Any?) -> Void) {
         LogUtils.debug("Setting up listener for name: \(name)")
         flutterListeners[name] = listener
     }
@@ -142,7 +142,7 @@ public class PlatformBridgePlugin: NSObject, FlutterPlugin {
      * - Parameter name: 数据标识符
      * - Returns: 存储的数据
      */
-    func getStoredData(forName name: String) -> Any? {
+    public func getStoredData(forName name: String) -> Any? {
         LogUtils.debug("Retrieving stored data for name: \(name)")
         return flutterDataStorage[name]
     }
@@ -152,7 +152,7 @@ public class PlatformBridgePlugin: NSObject, FlutterPlugin {
      *
      * - Parameter name: 数据标识符
      */
-    func removeStoredData(forName name: String) {
+    public func removeStoredData(forName name: String) {
         LogUtils.debug("Removing stored data for name: \(name)")
         flutterDataStorage.removeValue(forKey: name)
     }
@@ -160,7 +160,7 @@ public class PlatformBridgePlugin: NSObject, FlutterPlugin {
     /**
      * 清空所有已存储的数据
      */
-    func clearStoredData() {
+    public func clearStoredData() {
         LogUtils.debug("Clearing all stored data")
         flutterDataStorage.removeAll()
     }
@@ -168,7 +168,7 @@ public class PlatformBridgePlugin: NSObject, FlutterPlugin {
     /**
      * 发送预定义的数据类型示例
      */
-    func sendExampleData() {
+    public func sendExampleData() {
         LogUtils.info("Sending example data")
         
         // 示例：发送用户令牌
