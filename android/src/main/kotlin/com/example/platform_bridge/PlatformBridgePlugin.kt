@@ -14,26 +14,19 @@ import LogUtils
  * 1. Flutter向原生发送数据（sendToNative）
  * 2. 原生向Flutter发送数据（sendDataToFlutter）
  * 3. 原生监听来自Flutter的数据（listenFromFlutter）
- * 4. 可配置的数据存储功能（shouldStoreReceivedData）
  */
-class PlatformBridgePlugin(private val shouldStoreReceivedData: Boolean = false) : FlutterPlugin, MethodCallHandler, StreamHandler {
-    /// The MethodChannel that will the communication between Flutter and native Android
-    ///
-    /// This local reference serves to register the plugin with the Flutter Engine and unregister it
-    /// when the Flutter Engine is detached from the Activity
+class PlatformBridgePlugin private constructor() : FlutterPlugin, MethodCallHandler, StreamHandler {
+    /// 用于与Flutter通信的方法通道
     private lateinit var channel : MethodChannel
     
-    // 存储EventChannels的map，用于向Flutter发送数据
+    /// 存储EventChannels的map，用于向Flutter发送数据
     private val eventChannels = mutableMapOf<String, EventChannel.EventSink>()
     
-    // 存储监听器的map，用于监听来自Flutter的数据
+    /// 存储监听器的map，用于监听来自Flutter的数据
     private val flutterListeners = mutableMapOf<String, (Any?) -> Unit>()
     
-    // 存储从Flutter接收的数据
-    private val flutterDataStorage = mutableMapOf<String, Any?>()
-
     companion object {
-        /// 通道名称 - 使用完整包名前缀以避免命名冲突
+        /// 通道名称
         private const val CHANNEL_NAME = "com.seven.platform_bridge/platform_bridge"
         
         /// 获取平台版本号的方法名
@@ -50,12 +43,29 @@ class PlatformBridgePlugin(private val shouldStoreReceivedData: Boolean = false)
         
         /// 参数数据
         private const val PARAM_DATA = "data"
+        
+        /// 单例实例
+        @Volatile
+        private var INSTANCE: PlatformBridgePlugin? = null
+
+        /**
+         * 获取插件单例实例
+         */
+        @JvmStatic
+        fun getInstance(): PlatformBridgePlugin {
+            return INSTANCE ?: synchronized(this) {
+                INSTANCE ?: PlatformBridgePlugin().also { INSTANCE = it }
+            }
+        }
     }
 
     override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         LogUtils.d("Plugin attached to engine")
         channel = MethodChannel(flutterPluginBinding.binaryMessenger, CHANNEL_NAME)
         channel.setMethodCallHandler(this)
+        
+        // 保存单例引用
+        INSTANCE = this
     }
 
     override fun onMethodCall(call: MethodCall, result: Result) {
@@ -92,8 +102,11 @@ class PlatformBridgePlugin(private val shouldStoreReceivedData: Boolean = false)
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
-        Log.d(TAG, "Plugin detached from engine")
+        LogUtils.d("Plugin detached from engine")
         channel.setMethodCallHandler(null)
+        
+        // 清除单例引用
+        INSTANCE = null
     }
     
     /**
@@ -105,18 +118,10 @@ class PlatformBridgePlugin(private val shouldStoreReceivedData: Boolean = false)
     private fun handleDataFromFlutter(name: String, data: Any?) {
         LogUtils.d("Handling data from Flutter: name=$name, data=$data")
         
-        // 如果存在对应的监听器，则调用它
+        // 检查实例特定的监听器
         flutterListeners[name]?.let { listener ->
-            LogUtils.d("Calling listener for name: $name")
+            LogUtils.d("Calling instance listener for name: $name")
             listener(data)
-        }
-        
-        // 如果需要存储数据，则存储
-        if (shouldStoreReceivedData) {
-            LogUtils.d("Storing data with name: $name, data: $data")
-            flutterDataStorage[name] = data
-        } else {
-            LogUtils.d("Data storage is disabled, skipping storage for name: $name")
         }
     }
     
@@ -148,35 +153,6 @@ class PlatformBridgePlugin(private val shouldStoreReceivedData: Boolean = false)
         flutterListeners[name] = listener
     }
     
-    /**
-     * 获取已存储的数据
-     * 
-     * @param name 数据标识符
-     * @return 存储的数据
-     */
-    fun getStoredData(name: String): Any? {
-        LogUtils.d("Retrieving stored data for name: $name")
-        return flutterDataStorage[name]
-    }
-    
-    /**
-     * 删除已存储的数据
-     * 
-     * @param name 数据标识符
-     */
-    fun removeStoredData(name: String) {
-        LogUtils.d("Removing stored data for name: $name")
-        flutterDataStorage.remove(name)
-    }
-    
-    /**
-     * 清空所有已存储的数据
-     */
-    fun clearStoredData() {
-        LogUtils.d("Clearing all stored data")
-        flutterDataStorage.clear()
-    }
-    
     // StreamHandler methods for event channels (not currently used but required by interface)
     override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
         // Not used in this implementation
@@ -188,21 +164,4 @@ class PlatformBridgePlugin(private val shouldStoreReceivedData: Boolean = false)
         LogUtils.d("Event channel listening cancelled")
     }
     
-    /**
-     * 发送预定义的数据类型示例
-     */
-    fun sendExampleData() {
-        LogUtils.d("Sending example data")
-        
-        // 示例：发送用户令牌
-        sendDataToFlutter("USER_TOKEN", "abc123xyz")
-        
-        // 示例：发送用户信息JSON
-        val userInfo = mapOf(
-            "name" to "John Doe",
-            "email" to "john@example.com",
-            "age" to 30
-        )
-        sendDataToFlutter("USER_INFO", userInfo)
-    }
 }

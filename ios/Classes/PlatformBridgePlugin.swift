@@ -8,58 +8,63 @@ import UIKit
  * 1. Flutter向原生发送数据（sendToNative）
  * 2. 原生向Flutter发送数据（sendDataToFlutter）
  * 3. 原生监听来自Flutter的数据（listenFromFlutter）
- * 4. 可配置的数据存储功能（shouldStoreReceivedData）
  */
 public class PlatformBridgePlugin: NSObject, FlutterPlugin {
     private var channel: FlutterMethodChannel?
     
-    // 是否存储从Flutter接收的数据，默认为false
-    private let shouldStoreReceivedData: Bool
-    
     // 存储监听器的字典，用于监听来自Flutter的数据
     private var flutterListeners: [String: (Any?) -> Void] = [:]
     
-    // 存储从Flutter接收的数据
-    private var flutterDataStorage: [String: Any?] = [:]
-    
     // MARK: - Constants
-    private static let channelName = "com.seven.platform_bridge/platform_bridge"
-    private static let methodGetPlatformVersion = "getPlatformVersion"
-    private static let methodSendToNative = "sendToNative"
-    private static let methodSendToFlutter = "sendToFlutter"
-    private static let paramName = "name"
-    private static let paramData = "data"
+    private static let CHANNEL_NAME = "com.seven.platform_bridge/platform_bridge"
+    private static let METHOD_GET_PLATFORM_VERSION = "getPlatformVersion"
+    private static let METHOD_SEND_TO_NATIVE = "sendToNative"
+    private static let METHOD_SEND_TO_FLUTTER = "sendToFlutter"
+    private static let PARAM_NAME = "name"
+    private static let PARAM_DATA = "data"
     
-    // 初始化方法，可以设置是否存储接收的数据
-    public init(shouldStoreReceivedData: Bool = false) {
-        self.shouldStoreReceivedData = shouldStoreReceivedData
+    // MARK: - Singleton instance
+    private static var sharedInstance: PlatformBridgePlugin?
+    
+    // 私有初始化方法
+    private override init() {
         super.init()
         
-        LogUtils.info("PlatformBridgePlugin initialized with shouldStoreReceivedData: "
-                      + (shouldStoreReceivedData ? "true" : "false"))
+        LogUtils.info("PlatformBridgePlugin initialized")
     }
 
     public static func register(with registrar: FlutterPluginRegistrar) {
-        let channel = FlutterMethodChannel(name: PlatformBridgePlugin.channelName, binaryMessenger: registrar.messenger())
-        let instance = PlatformBridgePlugin()
+        let channel = FlutterMethodChannel(name: PlatformBridgePlugin.CHANNEL_NAME, binaryMessenger: registrar.messenger())
+        let instance = PlatformBridgePlugin.getInstance()
         instance.channel = channel
         registrar.addMethodCallDelegate(instance, channel: channel)
         
         LogUtils.info("PlatformBridgePlugin registered with registrar")
+    }
+    
+    /**
+     * 获取插件单例实例
+     */
+    public static func getInstance() -> PlatformBridgePlugin {
+        if let instance = sharedInstance {
+            return instance
+        }
+        let instance = PlatformBridgePlugin()
+        // 保存单例引用
+        PlatformBridgePlugin.sharedInstance = instance
+        return instance
     }
 
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         LogUtils.debug("Received method call: \(call.method)")
         
         switch call.method {
-        case PlatformBridgePlugin.methodGetPlatformVersion:
+        case PlatformBridgePlugin.METHOD_GET_PLATFORM_VERSION:
             LogUtils.info("Getting platform version")
             result("iOS " + UIDevice.current.systemVersion)
-        case PlatformBridgePlugin.methodSendToNative:
-            LogUtils.info("Handling sendToNative method call")
-            
+        case PlatformBridgePlugin.METHOD_SEND_TO_NATIVE:
             guard let arguments = call.arguments as? [String: Any],
-                  let name = arguments[PlatformBridgePlugin.paramName] as? String else {
+                  let name = arguments[PlatformBridgePlugin.PARAM_NAME] as? String else {
                 LogUtils.error("Invalid arguments: Missing name or data")
                 
                 result(FlutterError(code: "INVALID_ARGUMENT",
@@ -68,7 +73,7 @@ public class PlatformBridgePlugin: NSObject, FlutterPlugin {
                 return
             }
             
-            let data = arguments[PlatformBridgePlugin.paramData]
+            let data = arguments[PlatformBridgePlugin.PARAM_DATA]
             
             LogUtils.debug("Received data from Flutter: name=\(name), data=\(String(describing: data))")
             
@@ -92,18 +97,10 @@ public class PlatformBridgePlugin: NSObject, FlutterPlugin {
     private func handleDataFromFlutter(name: String, data: Any?) {
         LogUtils.debug("Handling data from Flutter: name=\(name), data=\(String(describing: data))")
         
-        // 如果存在对应的监听器，则调用它
+        // 检查实例特定的监听器
         if let listener = flutterListeners[name] {
-            LogUtils.debug("Calling listener for name: \(name)")
+            LogUtils.debug("Calling instance listener for name: \(name)")
             listener(data)
-        }
-        
-        // 如果需要存储数据，则存储
-        if shouldStoreReceivedData {
-            LogUtils.debug("Storing data with name: \(name), data=\(String(describing: data))")
-            flutterDataStorage[name] = data
-        } else {
-            LogUtils.debug("Data storage is disabled, skipping storage for name: \(name)")
         }
     }
     
@@ -118,10 +115,10 @@ public class PlatformBridgePlugin: NSObject, FlutterPlugin {
         LogUtils.debug("Sending data to Flutter: name=\(name), data=\(String(describing: data))")
         
         let args: [String: Any?] = [
-            PlatformBridgePlugin.paramName: name,
-            PlatformBridgePlugin.paramData: data
+            PlatformBridgePlugin.PARAM_NAME: name,
+            PlatformBridgePlugin.PARAM_DATA: data
         ]
-        channel?.invokeMethod(PlatformBridgePlugin.methodSendToFlutter, arguments: args)
+        channel?.invokeMethod(PlatformBridgePlugin.METHOD_SEND_TO_FLUTTER, arguments: args)
     }
     
     /**
@@ -132,54 +129,7 @@ public class PlatformBridgePlugin: NSObject, FlutterPlugin {
      *   - listener: 接收数据的回调函数
      */
     public func listenFromFlutter(name: String, listener: @escaping (Any?) -> Void) {
-        LogUtils.debug("Setting up listener for name: \(name)")
+        LogUtils.debug("Setting up listener for Flutter data: name=\(name)")
         flutterListeners[name] = listener
-    }
-    
-    /**
-     * 获取已存储的数据
-     *
-     * - Parameter name: 数据标识符
-     * - Returns: 存储的数据
-     */
-    public func getStoredData(forName name: String) -> Any? {
-        LogUtils.debug("Retrieving stored data for name: \(name)")
-        return flutterDataStorage[name]
-    }
-    
-    /**
-     * 删除已存储的数据
-     *
-     * - Parameter name: 数据标识符
-     */
-    public func removeStoredData(forName name: String) {
-        LogUtils.debug("Removing stored data for name: \(name)")
-        flutterDataStorage.removeValue(forKey: name)
-    }
-    
-    /**
-     * 清空所有已存储的数据
-     */
-    public func clearStoredData() {
-        LogUtils.debug("Clearing all stored data")
-        flutterDataStorage.removeAll()
-    }
-    
-    /**
-     * 发送预定义的数据类型示例
-     */
-    public func sendExampleData() {
-        LogUtils.info("Sending example data")
-        
-        // 示例：发送用户令牌
-        sendDataToFlutter(name: "USER_TOKEN", data: "abc123xyz")
-        
-        // 示例：发送用户信息字典
-        let userInfo: [String: Any] = [
-            "name": "John Doe",
-            "email": "john@example.com",
-            "age": 30
-        ]
-        sendDataToFlutter(name: "USER_INFO", data: userInfo)
     }
 }
