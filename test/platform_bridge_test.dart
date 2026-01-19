@@ -10,6 +10,12 @@ class MockPlatformBridgePlatform
 
   @override
   Future<String?> getPlatformVersion() => Future.value('42');
+
+  @override
+  Future<void> sendToNative(String name, dynamic data) async {}
+
+  @override
+  void listenFromNative(String name, Function(dynamic data) callback) {}
 }
 
 void main() {
