@@ -1,10 +1,10 @@
 name: platform_bridge
-description: A Flutter plugin that provides bidirectional communication between Flutter and native platforms (Android/iOS).
+description: A Flutter plugin for bidirectional communication between Flutter and native platforms (Android/iOS).
 version: 0.0.1
 homepage: https://github.com/547/platform_bridge
 
 environment:
-  sdk: ^3.6.2
+  sdk: '>=3.0.0 <4.0.0'
   flutter: '>=3.3.0'
 
 dependencies:

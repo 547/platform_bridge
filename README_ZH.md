@@ -1,17 +1,16 @@
-# Platform Bridge 插件
+# Platform Bridge
 
-一个Flutter插件，用于实现Flutter与原生平台（Android/iOS）之间的双向通信。
+一个Flutter插件，用于Flutter与原生平台(Android/iOS)之间的双向通信。
 
-## 功能特点
+## 功能
 
-- 从Flutter向原生平台发送数据
-- 从原生平台向Flutter发送数据
-- 监听来自双方的数据
-- 支持多种数据类型（字符串、数字、JSON对象等）
+- **双向通信**：支持从Flutter向原生平台发送数据，以及在Flutter中接收来自原生平台的数据。
+- **统一API**：提供跨平台的一致接口。
+- **简单集成**：易于与现有Flutter应用程序集成。
 
 ## 系统要求
 
-- Flutter 3.0 或更高版本
+- Flutter 3.3.0 或更高版本
 - Android API Level 21 或更高版本
 - iOS 11.0 或更高版本
 - Java 8 或更高版本（用于Android构建）
@@ -19,38 +18,49 @@
 
 ## 安装
 
-将以下内容添加到您的 `pubspec.yaml` 文件中：
+将插件添加到您的 `pubspec.yaml`:
 
 ```yaml
 dependencies:
   platform_bridge: ^0.0.1
 ```
 
-然后运行 `flutter pub get`。
+然后运行:
+
+```bash
+flutter pub get
+```
 
 ## 使用方法
 
-### 从Flutter向原生平台发送数据
+### 导入包
 
 ```dart
 import 'package:platform_bridge/platform_bridge.dart';
+```
+
+### 从Flutter向原生发送数据
+
+```dart
+PlatformBridge platformBridge = PlatformBridge();
 
 // 向原生平台发送数据
-await PlatformBridge.sendToNative('EVENT_NAME', {
-  'key': 'value',
-  'another_key': 123,
+await platformBridge.sendToNative("USER_INFO", {
+  "name": "John Doe",
+  "email": "john@example.com"
 });
 ```
 
-### 在Flutter中监听来自原生平台的数据
+### 监听来自原生平台的数据
 
 ```dart
-import 'package:platform_bridge/platform_bridge.dart';
-
-// 监听来自原生平台的数据
-PlatformBridge.listenFromNative('EVENT_NAME', (data) {
-  print('收到原生平台数据: $data');
+// 为来自原生平台的数据设置监听器
+platformBridge.listenFromNative("NOTIFICATION", (data) {
+  print("Received notification from native: $data");
 });
+
+// 开始监听
+await platformBridge.startListening();
 ```
 
 ### 从原生平台向Flutter发送数据
@@ -104,16 +114,20 @@ if let plugin = PlatformBridgePlugin.getInstance() {
 ## 重要说明
 
 ### 实例管理
-- 插件实例由Flutter框架在初始化期间管理
-- 在Android上，如果插件尚未初始化，`getInstance()` 方法可能返回null
-- 对于Android，您可能需要实现重试机制以等待插件实例准备就绪
-- 在iOS上，实例在Flutter初始化插件时创建
 
-### 线程安全性
-- MethodChannel调用可以从后台线程发起；Flutter框架会处理线程调度
-- 但是，由通信触发的UI更新必须在主线程上发生
-- 在Android上，当响应接收到的数据执行UI更新时，请使用 `runOnUiThread` 或 `Handler(Looper.getMainLooper())`
-- 在iOS上，当响应接收到的数据执行UI更新时，请使用 `DispatchQueue.main.async` 分派到主队列
+1. 插件实例是由Flutter框架在原生代码中的`onAttachedToEngine`被调用时创建和设置的。不要尝试直接创建新实例。
+2. `getInstance()`方法只返回当前设置的实例引用。如果插件尚未初始化，它将返回null。
+3. 不要在主线程使用像`Thread.sleep()`这样的阻塞机制来等待实例初始化，因为这可能导致UI卡顿。
+4. 通过实现重试机制或回调来处理异步初始化时序问题，以等待实例准备就绪。
+
+### 线程模型
+
+1. **MethodChannel调用**：可以从后台线程发起`invokeMethod`调用。Flutter框架会自动处理线程调度。
+2. **UI更新**：任何涉及UI更新的操作都必须在主线程上执行。
+3. **正确做法**：
+   - 可以从后台线程发起MethodChannel方法调用
+   - 更新UI时，使用`Handler(Looper.getMainLooper()).post()`（Android）或`DispatchQueue.main.async`（iOS）将任务提交到主线程
+4. 不要误解所有的跨平台通信都必须在主线程上发生，因为这会增加不必要的复杂性。
 
 ## 示例
 
