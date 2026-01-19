@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
 import 'dart:async';
 
+import 'package:flutter/material.dart';
 import 'package:platform_bridge/platform_bridge.dart';
 
 void main() {
@@ -8,7 +8,7 @@ void main() {
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -16,50 +16,34 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   final PlatformBridge _bridge = PlatformBridge();
-  String _platformVersion = 'Unknown';
-  String _receivedData = 'No data received yet';
-  int _clickCount = 0;
-
+  static const List<String> eventsToMonitor = [
+    'INITIAL_DATA',
+    'USER_INFO_DELAYED',
+    'COUNTER_UPDATE',
+    'COMPLEX_DATA',
+    'HEARTBEAT',
+    'PERIODIC_UPDATE',
+    'CLICK_COUNT',
+    'USER_INFO',
+    'TEST_FROM_FLUTTER'
+  ];
+  int clickCount = 0;
   @override
   void initState() {
     super.initState();
-    initPlatformState();
+    _initPlatformState();
   }
 
   // Platform messages are asynchronous, so we initialize in an async method.
-  Future<void> initPlatformState() async {
-    String platformVersion;
-    // Platform messages may fail, so we use a try/catch PlatformException.
-    // We also handle the message potentially returning null.
-    try {
-      platformVersion = await _bridge.getPlatformVersion() ?? 'Unknown platform version';
-    } catch (e) {
-      debugPrint('Failed to get platform version: $e');
-      return;
+  Future<void> _initPlatformState() async {
+    // 为每个事件设置监听器
+    for (final eventName in eventsToMonitor) {
+      _bridge.listenFromNative(eventName, (data) {
+        debugPrint('Flutter received from Native ($eventName): $data');
+      });
     }
 
-    // 初始化监听来自原生的数据
-    _bridge.listenFromNative('USER_TOKEN', (data) {
-      setState(() {
-        _receivedData = 'Received USER_TOKEN: $data';
-      });
-    });
-
-    _bridge.listenFromNative('USER_INFO', (data) {
-      setState(() {
-        _receivedData = 'Received USER_INFO: $data';
-      });
-    });
-
-    _bridge.listenFromNative('CLICK_COUNT', (data) {
-      setState(() {
-        _receivedData = 'Received CLICK_COUNT: $data';
-      });
-    });
-
-    setState(() {
-      _platformVersion = platformVersion;
-    });
+    setState(() {});
   }
 
   @override
@@ -67,42 +51,79 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       home: Scaffold(
         appBar: AppBar(
+          backgroundColor: Colors.blue,
+          foregroundColor: Colors.white,
           title: const Text('Platform Bridge Example'),
         ),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              Text('Running on: $_platformVersion\n'),
-              Text('$_receivedData\n'),
-              ElevatedButton(
-                onPressed: () async {
-                  _clickCount++;
-                  await _bridge.sendToNative('CLICK_COUNT', _clickCount);
-                  setState(() {
-                    _receivedData = 'Sent CLICK_COUNT: $_clickCount to native';
-                  });
-                },
-                child: const Text('Send Click Count to Native'),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  final userInfo = {
-                    'name': 'Flutter User',
-                    'email': 'flutter@example.com',
-                    'timestamp': DateTime.now().millisecondsSinceEpoch,
-                  };
-                  await _bridge.sendToNative('USER_INFO', userInfo);
-                  setState(() {
-                    _receivedData = 'Sent USER_INFO to native';
-                  });
-                },
-                child: const Text('Send User Info to Native'),
-              ),
-            ],
+        body: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 发送数据到原生的按钮
+                const SizedBox(height: 20),
+                const Text(
+                  'Send Data to Native',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                ElevatedButton(
+                  onPressed: _sendClickCount,
+                  child: const Text('Send Click Count to Native'),
+                ),
+                const SizedBox(height: 10),
+                ElevatedButton(
+                  onPressed: _sendUserInfo,
+                  child: const Text('Send User Info to Native'),
+                ),
+                const SizedBox(height: 10),
+                ElevatedButton(
+                  onPressed: _sendTestData,
+                  child: const Text('Send Test Data to Native'),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
+  }
+
+  // 发送点击次数到原生
+  void _sendClickCount() async {
+    clickCount++;
+
+    await _bridge.sendToNative('CLICK_COUNT', {
+      'click_count': clickCount,
+      'timestamp': DateTime.now().millisecondsSinceEpoch,
+    });
+
+    debugPrint('Sent CLICK_COUNT to native: $clickCount');
+  }
+
+  // 发送用户信息到原生
+  void _sendUserInfo() async {
+    await _bridge.sendToNative('USER_INFO', {
+      'name': 'Flutter User',
+      'platform': 'Flutter',
+      'timestamp': DateTime.now().millisecondsSinceEpoch,
+    });
+
+    debugPrint('Sent USER_INFO to native');
+  }
+
+  // 发送测试数据到原生
+  void _sendTestData() async {
+    await _bridge.sendToNative('TEST_FROM_FLUTTER', {
+      'message': 'Hello from Flutter!',
+      'timestamp': DateTime.now().millisecondsSinceEpoch,
+    });
+
+    debugPrint('Sent TEST_FROM_FLUTTER to native');
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 }
