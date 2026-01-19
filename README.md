@@ -1,171 +1,130 @@
-# platform_bridge
+# Platform Bridge Plugin
 
-A Flutter plugin that provides bidirectional communication between Flutter and native platforms (Android/iOS).
+A Flutter plugin that enables bidirectional communication between Flutter and native platforms (Android/iOS).
+
+[中文文档](./README_ZH.md)
 
 ## Features
 
-- Send data from Flutter to native platforms (Android/iOS)
-- Send data from native platforms (Android/iOS) to Flutter
-- Listen for data with custom identifiers
-- Support for various data types (String, int, double, bool, Map, List, etc.)
-- Configurable data storage on native platforms
-- Manual data removal capabilities
+- Send data from Flutter to native platforms
+- Send data from native platforms to Flutter
+- Listen for data from both sides
+- Support for various data types (strings, numbers, JSON objects, etc.)
+
+## Requirements
+
+- Flutter 3.0 or higher
+- Android API Level 21 or higher
+- iOS 11.0 or higher
+- Java 8 or higher (for Android builds)
+- Xcode 13.0 or higher (for iOS builds)
+
+## Installation
+
+Add the package to your `pubspec.yaml`:
+
+```yaml
+dependencies:
+  platform_bridge: ^0.0.1
+```
+
+Then run `flutter pub get`.
 
 ## Usage
 
-### Send Data from Flutter to Native
+### Sending Data from Flutter to Native
 
 ```dart
-final bridge = PlatformBridge();
+import 'package:platform_bridge/platform_bridge.dart';
 
-// Send a string
-await bridge.sendToNative('USER_TOKEN', 'abc123xyz');
-
-// Send JSON data (Map)
-await bridge.sendToNative('USER_INFO', {
-  'name': 'John Doe',
-  'email': 'john@example.com',
-  'age': 30
+// Send data to native
+await PlatformBridge.sendToNative('EVENT_NAME', {
+  'key': 'value',
+  'another_key': 123,
 });
-
-// Send integer
-await bridge.sendToNative('CLICK_COUNT', 42);
 ```
 
-### Listen for Data from Native in Flutter
+### Listening for Data from Native in Flutter
 
 ```dart
-final bridge = PlatformBridge();
+import 'package:platform_bridge/platform_bridge.dart';
 
-// Listen for USER_TOKEN
-bridge.listenFromNative('USER_TOKEN', (data) {
-  print('Received USER_TOKEN: $data');
-});
-
-// Listen for USER_INFO
-bridge.listenFromNative('USER_INFO', (data) {
-  print('Received USER_INFO: $data');
+// Listen for data from native
+PlatformBridge.listenFromNative('EVENT_NAME', (data) {
+  print('Received data from native: $data');
 });
 ```
 
-### Send Data from Native to Flutter
+### Sending Data from Native to Flutter
 
-#### Android (Kotlin)
+#### Android
 ```kotlin
-val plugin = PlatformBridgePlugin()
-plugin.sendDataToFlutter("USER_TOKEN", "abc123xyz")
-
-val userInfo = mapOf(
-    "name" to "John Doe",
-    "email" to "john@example.com",
-    "age" to 30
-)
-plugin.sendDataToFlutter("USER_INFO", userInfo)
-```
-
-#### iOS (Swift)
-```swift
-let plugin = PlatformBridgePlugin()
-plugin.sendDataToFlutter(name: "USER_TOKEN", data: "abc123xyz")
-
-let userInfo: [String: Any] = [
-    "name": "John Doe",
-    "email": "john@example.com",
-    "age": 30
-]
-plugin.sendDataToFlutter(name: "USER_INFO", data: userInfo)
-```
-
-### Listen for Data from Flutter in Native
-
-#### Android (Kotlin)
-```kotlin
-val plugin = PlatformBridgePlugin()
-
-// Listen for CLICK_COUNT
-plugin.listenFromFlutter("CLICK_COUNT") { data ->
-    println("Received CLICK_COUNT: $data")
-}
-
-// Listen for USER_INFO
-plugin.listenFromFlutter("USER_INFO") { data ->
-    println("Received USER_INFO: $data")
+// In your Activity or other Android component
+val plugin = PlatformBridgePlugin.getInstance()
+if (plugin != null) {
+  plugin.sendDataToFlutter("EVENT_NAME", mapOf(
+    "key" to "value",
+    "another_key" to 123
+  ))
 }
 ```
 
-#### iOS (Swift)
+#### iOS
 ```swift
-let plugin = PlatformBridgePlugin()
-
-// Listen for CLICK_COUNT
-plugin.listenFromFlutter(name: "CLICK_COUNT") { data in
-    print("Received CLICK_COUNT: \\(String(describing: data))")
-}
-
-// Listen for USER_INFO
-plugin.listenFromFlutter(name: "USER_INFO") { data in
-    print("Received USER_INFO: \\(String(describing: data))")
+// In your AppDelegate or other iOS component
+if let plugin = PlatformBridgePlugin.getInstance() {
+  plugin.sendDataToFlutter(name: "EVENT_NAME", data: [
+    "key": "value",
+    "another_key": 123
+  ])
 }
 ```
 
-### Configure Data Storage Behavior at Initialization
+### Listening for Data from Flutter in Native
 
-Control whether to store data received from Flutter at initialization:
-
-#### Android (Kotlin)
+#### Android
 ```kotlin
-// Initialize with data storage enabled
-val pluginWithStorage = PlatformBridgePlugin(true)
-
-// Initialize with data storage disabled (default behavior)
-val pluginWithoutStorage = PlatformBridgePlugin(false)
-val pluginWithoutStorageDefault = PlatformBridgePlugin()  // Same as passing false
+// In your Activity or other Android component
+val plugin = PlatformBridgePlugin.getInstance()
+if (plugin != null) {
+  plugin.listenFromFlutter("EVENT_NAME") { data ->
+    println("Received data from Flutter: $data")
+  }
+}
 ```
 
-#### iOS (Swift)
+#### iOS
 ```swift
-// Initialize with data storage enabled
-let pluginWithStorage = PlatformBridgePlugin(shouldStoreReceivedData: true)
-
-// Initialize with data storage disabled (default behavior)
-let pluginWithoutStorage = PlatformBridgePlugin(shouldStoreReceivedData: false)
-let pluginWithoutStorageDefault = PlatformBridgePlugin()  // Same as passing false
+// In your AppDelegate or other iOS component
+if let plugin = PlatformBridgePlugin.getInstance() {
+  plugin.listenFromFlutter(name: "EVENT_NAME", callback: { data in
+    print("Received data from Flutter: $data")
+  })
+}
 ```
 
-### Manage Stored Data
+## Important Notes
 
-When data storage is enabled, you can manage the stored data:
+### Instance Management
+- The plugin instance is managed by the Flutter framework during initialization
+- On Android, the `getInstance()` method may return null if the plugin hasn't been initialized yet
+- For Android, you may need to implement a retry mechanism to wait for the plugin instance to be ready
+- On iOS, the instance is created when Flutter initializes the plugin
 
-#### Android (Kotlin)
-```kotlin
-val plugin = PlatformBridgePlugin(true)  // Enable storage at initialization
+### Thread Safety
+- MethodChannel calls can be initiated from background threads; Flutter framework handles thread scheduling
+- However, UI updates triggered by the communication must happen on the main thread
+- On Android, when performing UI updates in response to received data, use `runOnUiThread` or `Handler(Looper.getMainLooper())`
+- On iOS, when performing UI updates in response to received data, dispatch to the main queue using `DispatchQueue.main.async`
 
-// Get stored data
-val token = plugin.getStoredData("USER_TOKEN")
+## Example
 
-// Remove specific stored data
-plugin.removeStoredData("USER_TOKEN")
+Check the `example` directory for a complete example showing how to use the plugin in both Flutter and native code.
 
-// Clear all stored data
-plugin.clearStoredData()
-```
+## Contributing
 
-#### iOS (Swift)
-```swift
-let plugin = PlatformBridgePlugin(shouldStoreReceivedData: true)  // Enable storage at initialization
+Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 
-// Get stored data
-let token = plugin.getStoredData(forName: "USER_TOKEN")
+## License
 
-// Remove specific stored data
-plugin.removeStoredData(forName: "USER_TOKEN")
-
-// Clear all stored data
-plugin.clearStoredData()
-```
-
-### How It Works
-
-Native platforms automatically receive data sent from Flutter via the `sendToNative` method. When Flutter calls `sendToNative`, the native platform receives the data and triggers any corresponding listeners registered with `listenFromFlutter`.
-
-You can control whether the data should be stored by setting the storage option during initialization (defaults to `false`). When enabled, data is stored and can be accessed later using the storage management methods.
+MIT
