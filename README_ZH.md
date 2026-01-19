@@ -22,7 +22,7 @@
 
 ```yaml
 dependencies:
-  platform_bridge: ^0.0.1
+  platform_bridge: ^0.0.2
 ```
 
 然后运行:

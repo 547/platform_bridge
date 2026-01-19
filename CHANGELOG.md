@@ -1,3 +1,10 @@
+## 0.0.2
+
+- Updated documentation in README files
+- Improved installation instructions
+- Enhanced usage examples
+- Fixed minor documentation issues
+
 ## 0.0.1
 
 - Initial release

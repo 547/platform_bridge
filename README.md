@@ -24,7 +24,7 @@ Add the plugin to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  platform_bridge: ^0.0.1
+  platform_bridge: ^0.0.2
 ```
 
 Then run:
