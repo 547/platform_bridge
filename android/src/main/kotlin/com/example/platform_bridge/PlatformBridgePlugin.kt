@@ -46,12 +46,13 @@ class PlatformBridgePlugin : FlutterPlugin, MethodCallHandler {
 
         /**
          * 获取插件单例实例
+         * 
+         * 注意：在Flutter引擎完成插件初始化之前调用此方法可能会返回null，
+         * 因为插件实例需要通过onAttachedToEngine方法由Flutter框架创建。
          */
         @JvmStatic
-        fun getInstance(): PlatformBridgePlugin {
-            return INSTANCE ?: synchronized(this) {
-                INSTANCE ?: PlatformBridgePlugin().also { INSTANCE = it }
-            }
+        fun getInstance(): PlatformBridgePlugin? {
+            return INSTANCE
         }
     }
 
