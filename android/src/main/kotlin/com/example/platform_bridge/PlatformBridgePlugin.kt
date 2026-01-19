@@ -5,7 +5,6 @@ import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.*
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
-import LogUtils
 
 /** 
  * PlatformBridgePlugin - 用于Flutter与原生Android平台间双向通信的插件
@@ -15,12 +14,9 @@ import LogUtils
  * 2. 原生向Flutter发送数据（sendDataToFlutter）
  * 3. 原生监听来自Flutter的数据（listenFromFlutter）
  */
-class PlatformBridgePlugin private constructor() : FlutterPlugin, MethodCallHandler, StreamHandler {
+class PlatformBridgePlugin : FlutterPlugin, MethodCallHandler {
     /// 用于与Flutter通信的方法通道
     private lateinit var channel : MethodChannel
-    
-    /// 存储EventChannels的map，用于向Flutter发送数据
-    private val eventChannels = mutableMapOf<String, EventChannel.EventSink>()
     
     /// 存储监听器的map，用于监听来自Flutter的数据
     private val flutterListeners = mutableMapOf<String, (Any?) -> Unit>()
@@ -58,6 +54,9 @@ class PlatformBridgePlugin private constructor() : FlutterPlugin, MethodCallHand
             }
         }
     }
+
+    /// 默认构造函数，供Flutter框架使用
+    constructor()
 
     override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         LogUtils.d("Plugin attached to engine")
@@ -152,16 +151,4 @@ class PlatformBridgePlugin private constructor() : FlutterPlugin, MethodCallHand
         LogUtils.d("Setting up listener for name: $name")
         flutterListeners[name] = listener
     }
-    
-    // StreamHandler methods for event channels (not currently used but required by interface)
-    override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
-        // Not used in this implementation
-        LogUtils.d("Event channel listening started")
-    }
-
-    override fun onCancel(arguments: Any?) {
-        // Not used in this implementation
-        LogUtils.d("Event channel listening cancelled")
-    }
-    
 }
