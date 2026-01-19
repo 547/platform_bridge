@@ -61,8 +61,6 @@ platformBridge.listenFromNative("NOTIFICATION", (data) {
   print("Received notification from native: $data");
 });
 
-// Start listening
-await platformBridge.startListening();
 ```
 
 ### Sending Data from Native to Flutter
@@ -107,9 +105,9 @@ if (plugin != null) {
 ```swift
 // In your AppDelegate or other iOS component
 if let plugin = PlatformBridgePlugin.getInstance() {
-  plugin.listenFromFlutter(name: "EVENT_NAME", callback: { data in
-    print("Received data from Flutter: $data")
-  })
+  plugin.listenFromFlutter(name: "EVENT_NAME") { data in
+    print("Received data from Flutter: \(data ?? "nil")")
+  }
 }
 ```
 
