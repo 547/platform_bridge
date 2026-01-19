@@ -12,30 +12,58 @@ import kotlin.concurrent.schedule
 
 class MainActivity: FlutterActivity() {
     private val mainHandler = Handler(Looper.getMainLooper())
+    private var retryCount = 0
+    private val maxRetries = 50  // 最大重试次数
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // 设置监听器，监听来自Flutter的数据
-        PlatformBridgePlugin.getInstance().listenFromFlutter("CLICK_COUNT") { data ->
-            println("Android received from Flutter CLICK_COUNT event: $data")
+        // 初始化原生监听器，带有重试机制
+        setupNativeListenersWithRetry()
+    }
+    
+    private fun setupNativeListenersWithRetry() {
+        val pluginInstance = PlatformBridgePlugin.getInstance()
+        if (pluginInstance != null) {
+            // 设置监听器，监听来自Flutter的数据
+            pluginInstance.listenFromFlutter("CLICK_COUNT") { data ->
+                println("Android received from Flutter CLICK_COUNT event: $data")
+            }
+            
+            pluginInstance.listenFromFlutter("USER_INFO") { data ->
+                println("Android received from Flutter USER_INFO event: $data")
+            }
+            
+            // 添加一个监听器，监听所有可能的事件
+            pluginInstance.listenFromFlutter("TEST_FROM_FLUTTER") { data ->
+                println("Android received from Flutter TEST_FROM_FLUTTER event: $data")
+            }
+            
+            println("Native listeners set up successfully")
+            
+            // 设置延迟测试数据发送
+            setupDelayedTestData()
+        } else {
+            if (retryCount < maxRetries) {
+                retryCount++
+                println("Plugin instance not ready, retrying... ($retryCount/$maxRetries)")
+                
+                // 延迟500毫秒后重试
+                mainHandler.postDelayed({
+                    setupNativeListenersWithRetry()
+                }, 100)
+            } else {
+                println("Failed to get plugin instance after $maxRetries retries")
+            }
         }
-        
-        PlatformBridgePlugin.getInstance().listenFromFlutter("USER_INFO") { data ->
-            println("Android received from Flutter USER_INFO event: $data")
-        }
-        
-        // 添加一个监听器，监听所有可能的事件
-        PlatformBridgePlugin.getInstance().listenFromFlutter("TEST_FROM_FLUTTER") { data ->
-            println("Android received from Flutter TEST_FROM_FLUTTER event: $data")
-        }
-        
-        // 添加几个延迟发送数据到Flutter的测试方法
-        setupDelayedTestData()
     }
     
     private fun setupDelayedTestData() {
         val plugin = PlatformBridgePlugin.getInstance()
+        if (plugin == null) {
+            println("Plugin instance is not ready for sending test data")
+            return
+        }
         
         // 1秒后发送初始测试数据
         Timer().schedule(1000) {
@@ -55,10 +83,13 @@ class MainActivity: FlutterActivity() {
                     "device" to "Pixel",
                     "platform" to "Android"
                 ))
-            }
-            mainHandler.post {
                 plugin.sendDataToFlutter("USER_INFO_DELAYED", mapOf(
                     "name" to "Android User 2",
+                    "device" to "Pixel",
+                    "platform" to "Android"
+                ))
+                plugin.sendDataToFlutter("USER_INFO_DELAYED", mapOf(
+                    "name" to "Android User 3",
                     "device" to "Pixel",
                     "platform" to "Android"
                 ))
