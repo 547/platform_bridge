@@ -22,7 +22,7 @@
 
 ```yaml
 dependencies:
-  platform_bridge: ^0.0.2
+  platform_bridge: ^0.0.3
 ```
 
 然后运行:
@@ -78,12 +78,11 @@ if (plugin != null) {
 #### iOS
 ```swift
 // 在AppDelegate或其他iOS组件中
-if let plugin = PlatformBridgePlugin.getInstance() {
-  plugin.sendDataToFlutter(name: "EVENT_NAME", data: [
-    "key": "value",
-    "another_key": 123
-  ])
-}
+let plugin = PlatformBridgePlugin.getInstance()
+plugin.sendDataToFlutter(name: "EVENT_NAME", data: [
+  "key": "value",
+  "another_key": 123
+])
 ```
 
 ### 在原生平台监听来自Flutter的数据
@@ -102,10 +101,9 @@ if (plugin != null) {
 #### iOS
 ```swift
 // 在AppDelegate或其他iOS组件中
-if let plugin = PlatformBridgePlugin.getInstance() {
-  plugin.listenFromFlutter(name: "EVENT_NAME") { data in
-    print("收到Flutter数据: \(data ?? "nil")")
-  }
+let plugin = PlatformBridgePlugin.getInstance()
+plugin.listenFromFlutter(name: "EVENT_NAME") { data in
+  print("收到Flutter数据: \(data ?? "nil")")
 }
 ```
 

@@ -24,7 +24,7 @@ Add the plugin to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  platform_bridge: ^0.0.2
+  platform_bridge: ^0.0.3
 ```
 
 Then run:
@@ -80,12 +80,11 @@ if (plugin != null) {
 #### iOS
 ```swift
 // In your AppDelegate or other iOS component
-if let plugin = PlatformBridgePlugin.getInstance() {
-  plugin.sendDataToFlutter(name: "EVENT_NAME", data: [
+let plugin = PlatformBridgePlugin.getInstance()
+plugin.sendDataToFlutter(name: "EVENT_NAME", data: [
     "key": "value",
     "another_key": 123
-  ])
-}
+])
 ```
 
 ### Listening for Data from Flutter in Native
@@ -104,10 +103,9 @@ if (plugin != null) {
 #### iOS
 ```swift
 // In your AppDelegate or other iOS component
-if let plugin = PlatformBridgePlugin.getInstance() {
-  plugin.listenFromFlutter(name: "EVENT_NAME") { data in
-    print("Received data from Flutter: \(data ?? "nil")")
-  }
+let plugin = PlatformBridgePlugin.getInstance()
+plugin.listenFromFlutter(name: "EVENT_NAME") { data in
+  print("Received data from Flutter: \(data ?? "nil")")
 }
 ```
 
